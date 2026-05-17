@@ -10,6 +10,12 @@ public static class SandboxBuilder
     const string MatPath = "Assets/Materials";
     static readonly string[] CustomTags = { "NPCHead", "NPCTorso", "NPCArm", "NPCEscort" };
 
+    const string XROriginName        = "XR Origin (XR Rig)";
+    const string CameraOffsetName    = "Camera Offset";
+    const string MainCameraName      = "Main Camera";
+    const string LeftControllerName  = "Left Controller";
+    const string RightControllerName = "Right Controller";
+
     [MenuItem("Why Gary/Build Sandbox Scene")]
     public static void BuildSandbox()
     {
@@ -26,6 +32,7 @@ public static class SandboxBuilder
 
         WirePlayerBodyDriver(player);
         WireWaveDetector(gesture, player, npc.reaction);
+        RegisterSceneInBuildSettings();
 
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
             UnityEngine.SceneManagement.SceneManager.GetActiveScene());
@@ -37,7 +44,10 @@ public static class SandboxBuilder
 
     static void EnsureTags()
     {
-        var so   = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+        var assets = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset");
+        if (assets.Length == 0) { Debug.LogError("TagManager.asset not found."); return; }
+        var so   = new SerializedObject(assets[0]);
+        so.UpdateIfRequiredOrScript();
         var tags = so.FindProperty("tags");
         foreach (var tag in CustomTags)
         {
@@ -46,6 +56,7 @@ public static class SandboxBuilder
                 if (tags.GetArrayElementAtIndex(i).stringValue == tag) { exists = true; break; }
             if (!exists)
             {
+                Undo.RecordObject(assets[0], $"Add tag {tag}");
                 tags.arraySize++;
                 tags.GetArrayElementAtIndex(tags.arraySize - 1).stringValue = tag;
             }
@@ -75,7 +86,7 @@ public static class SandboxBuilder
         string path = $"{MatPath}/{name}.mat";
         var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
         if (existing != null) return existing;
-        var mat = new Material(Shader.Find("Standard")) { color = color };
+        var mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard")) { color = color };
         AssetDatabase.CreateAsset(mat, path);
         return mat;
     }
@@ -296,32 +307,51 @@ public static class SandboxBuilder
     static void WirePlayerBodyDriver(PlayerParts p)
     {
         var driver = p.root.GetComponent<PlayerBodyDriver>();
-        var xrOrigin = GameObject.Find("XR Origin (XR Rig)");
+        var xrOrigin = GameObject.Find(XROriginName);
         if (xrOrigin == null) { Debug.LogWarning("XR Origin not found — wire PlayerBodyDriver manually."); return; }
 
-        var camOffset = xrOrigin.transform.Find("Camera Offset");
-        driver.hmdTransform             = camOffset?.Find("Main Camera");
-        driver.leftControllerTransform  = camOffset?.Find("Left Controller");
-        driver.rightControllerTransform = camOffset?.Find("Right Controller");
+        var camOffset = xrOrigin.transform.Find(CameraOffsetName);
+        driver.hmdTransform             = camOffset?.Find(MainCameraName);
+        driver.leftControllerTransform  = camOffset?.Find(LeftControllerName);
+        driver.rightControllerTransform = camOffset?.Find(RightControllerName);
         driver.bodyRoot                 = p.root.transform;
         driver.headTarget               = p.head.transform;
         driver.torsoTarget              = p.torso.transform;
         driver.leftHandTarget           = p.leftHand.transform;
         driver.rightHandTarget          = p.rightHand.transform;
-        EditorUtility.SetDirty(driver);
     }
 
     static void WireWaveDetector(GameObject gs, PlayerParts player, NPCReaction reaction)
     {
-        var detector  = gs.GetComponent<WaveDetector>();
-        var xrOrigin  = GameObject.Find("XR Origin (XR Rig)");
-        var camOffset = xrOrigin?.transform.Find("Camera Offset");
-        detector.hmdTransform       = camOffset?.Find("Main Camera");
+        var detector = gs.GetComponent<WaveDetector>();
+        if (detector == null) { Debug.LogError("[SandboxBuilder] WaveDetector not found on GestureSystem."); return; }
+        var xrOrigin  = GameObject.Find(XROriginName);
+        var camOffset = xrOrigin?.transform.Find(CameraOffsetName);
+        detector.hmdTransform       = camOffset?.Find(MainCameraName);
         detector.leftHandTransform  = player.leftHand.transform;
         detector.rightHandTransform = player.rightHand.transform;
 
         // Wave → NPC nod is wired at runtime in NPCReaction.Start()
-        EditorUtility.SetDirty(detector);
+    }
+
+    // ── Build Settings ────────────────────────────────────────────────────────
+
+    static void RegisterSceneInBuildSettings()
+    {
+        var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+        if (string.IsNullOrEmpty(scene.path))
+        {
+            Debug.LogWarning("Save the scene first (Ctrl+S), then re-run the builder to register it in Build Settings.");
+            return;
+        }
+        var existing = EditorBuildSettings.scenes;
+        foreach (var s in existing)
+            if (s.path == scene.path) return;
+        var updated = new EditorBuildSettingsScene[existing.Length + 1];
+        existing.CopyTo(updated, 0);
+        updated[existing.Length] = new EditorBuildSettingsScene(scene.path, true);
+        EditorBuildSettings.scenes = updated;
+        Debug.Log($"<color=lime>Registered '{scene.path}' in Build Settings.</color>");
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

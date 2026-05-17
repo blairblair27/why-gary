@@ -1,36 +1,41 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(Collider))]
 public class CorkProjectile : MonoBehaviour
 {
+    [SerializeField] float _headDamage  = 9999f;
+    [SerializeField] float _torsoDamage = 40f;
+    [SerializeField] float _armDamage   = 18f;
+    [SerializeField] float _maxLifetime = 8f;
+
+    void Awake()
+    {
+        var rb = GetComponent<Rigidbody>();
+        if (rb != null) rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+    }
+
+    void Start() => Destroy(gameObject, _maxLifetime);
+
     void OnCollisionEnter(Collision col)
     {
-        string tag = col.gameObject.tag;
-
-        // Escort hit = lose condition, no damage calculation needed
-        if (tag == "NPCEscort")
+        if (col.gameObject.CompareTag("NPCEscort"))
         {
             col.gameObject.GetComponentInParent<EscortAgent>()?.OnHitByCork();
             Destroy(gameObject);
             return;
         }
 
-        float damage = tag switch
-        {
-            "NPCHead"  => 9999f,
-            "NPCTorso" => 40f,
-            "NPCArm"   => 18f,
-            _          => 0f
-        };
+        float damage = 0f;
+        if      (col.gameObject.CompareTag("NPCHead"))  damage = _headDamage;
+        else if (col.gameObject.CompareTag("NPCTorso")) damage = _torsoDamage;
+        else if (col.gameObject.CompareTag("NPCArm"))   damage = _armDamage;
 
         if (damage > 0)
         {
-            // col.impulse points away from the surface, so negate to get hit direction
-            Vector3 hitDir = col.impulse.sqrMagnitude > 0.001f
-                ? -col.impulse.normalized
-                : transform.forward;
-
-            col.gameObject.GetComponentInParent<NPCHealth>()
-                ?.TakeDamage(damage, col.contacts[0].point, hitDir);
+            Vector3 hitPoint = col.contactCount > 0 ? col.contacts[0].point : transform.position;
+            Vector3 hitDir = col.impulse.sqrMagnitude > 0.001f ? -col.impulse.normalized : transform.forward;
+            col.gameObject.GetComponentInParent<NPCHealth>()?.TakeDamage(damage, hitPoint, hitDir);
         }
 
         Destroy(gameObject);

@@ -13,6 +13,8 @@ public class WhyGaryScenario : ScenarioBase
 
     protected override void OnScenarioStart()
     {
+        if (targetNPC == null)
+            Debug.LogError("[WhyGaryScenario] targetNPC is not assigned — win condition disabled!", this);
         if (patrolGroup != null) patrolGroup.enabled = true;
     }
 
@@ -21,6 +23,7 @@ public class WhyGaryScenario : ScenarioBase
         if (_ended) return;
         if (targetNPC != null && targetNPC.IsDead)
         {
+            _ended = true;
             Win();
         }
     }
@@ -31,8 +34,9 @@ public class WhyGaryScenario : ScenarioBase
         if (_ended) return;
         _ended = true;
         if (patrolGroup != null) patrolGroup.enabled = false;
-        foreach (var escort in escorts)
-            escort?.StartTackle(playerHMD);
+        if (escorts != null)
+            foreach (var escort in escorts)
+                escort?.StartTackle(playerHMD);
         EndScenario(won: false, loseReason: "escort hit");
     }
 
@@ -41,12 +45,12 @@ public class WhyGaryScenario : ScenarioBase
     {
         if (_ended) return;
         _ended = true;
+        if (patrolGroup != null) patrolGroup.enabled = false;
         EndScenario(won: false, loseReason: "target escaped");
     }
 
     void Win()
     {
-        _ended = true;
         if (patrolGroup != null) patrolGroup.enabled = false;
         EndScenario(won: true);
     }

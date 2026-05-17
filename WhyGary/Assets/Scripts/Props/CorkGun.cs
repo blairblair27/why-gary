@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
+[RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(XRGrabInteractable))]
 public class CorkGun : MonoBehaviour
 {
     public Transform firePoint;
@@ -14,8 +16,8 @@ public class CorkGun : MonoBehaviour
 
     void Awake() => _grab = GetComponent<XRGrabInteractable>();
 
-    void OnEnable()  => _grab.activated.AddListener(OnFire);
-    void OnDisable() => _grab.activated.RemoveListener(OnFire);
+    void OnEnable()  { if (_grab != null) _grab.activated.AddListener(OnFire); }
+    void OnDisable() { if (_grab != null) _grab.activated.RemoveListener(OnFire); }
 
     void OnFire(ActivateEventArgs _)
     {

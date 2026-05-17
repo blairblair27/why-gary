@@ -6,12 +6,15 @@ public class EscortAgent : MonoBehaviour
 
     State _state = State.Patrolling;
     Transform _playerTarget;
+    WhyGaryScenario _scenario;
     const float TackleSpeed = 3f;
+
+    void Start() => _scenario = FindAnyObjectByType<WhyGaryScenario>();
 
     // Called by CorkProjectile when tag == "NPCEscort"
     public void OnHitByCork()
     {
-        FindFirstObjectByType<WhyGaryScenario>()?.OnEscortHit();
+        _scenario?.OnEscortHit();
     }
 
     public void StartTackle(Transform player)
@@ -24,10 +27,11 @@ public class EscortAgent : MonoBehaviour
     {
         if (_state != State.Tackling || _playerTarget == null) return;
 
-        transform.position = Vector3.MoveTowards(
-            transform.position, _playerTarget.position, TackleSpeed * Time.deltaTime);
+        // Flatten to floor so escorts don't float up toward the HMD
+        Vector3 flatTarget = new Vector3(_playerTarget.position.x, transform.position.y, _playerTarget.position.z);
+        transform.position = Vector3.MoveTowards(transform.position, flatTarget, TackleSpeed * Time.deltaTime);
 
-        Vector3 lookDir = _playerTarget.position - transform.position;
+        Vector3 lookDir = flatTarget - transform.position;
         if (lookDir.sqrMagnitude > 0.01f)
             transform.rotation = Quaternion.LookRotation(lookDir, Vector3.up);
     }

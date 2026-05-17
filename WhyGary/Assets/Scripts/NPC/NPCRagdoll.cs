@@ -7,11 +7,13 @@ public class NPCRagdoll : MonoBehaviour
     public Material deadMaterial;
 
     Rigidbody[] _bodies;
+    MeshRenderer[] _renderers;
     bool _ragdollActive;
 
     void Awake()
     {
         _bodies = GetComponentsInChildren<Rigidbody>();
+        _renderers = GetComponentsInChildren<MeshRenderer>();
         SetKinematic(true);
     }
 
@@ -35,12 +37,14 @@ public class NPCRagdoll : MonoBehaviour
         _ragdollActive = true;
         SetKinematic(false);
         ApplyImpulse(hitPoint, impulse);
+    }
 
-        if (deadMaterial != null)
-        {
-            foreach (var r in GetComponentsInChildren<MeshRenderer>())
-                r.material = deadMaterial;
-        }
+    // Call only on actual death — applies dead material separately from physics ragdoll
+    public void OnDied()
+    {
+        if (deadMaterial == null) return;
+        foreach (var r in _renderers)
+            r.sharedMaterial = deadMaterial;
     }
 
     public void OnGrabbed() => EnableRagdoll();
@@ -48,12 +52,22 @@ public class NPCRagdoll : MonoBehaviour
     void ApplyImpulse(Vector3 hitPoint, Vector3 impulse)
     {
         if (impulse.sqrMagnitude < 0.01f || _bodies.Length == 0) return;
-        Rigidbody closest = _bodies.OrderBy(rb => Vector3.Distance(rb.position, hitPoint)).First();
+        Rigidbody closest = _bodies[0];
+        float closestSqr = (closest.position - hitPoint).sqrMagnitude;
+        for (int i = 1; i < _bodies.Length; i++)
+        {
+            float d = (_bodies[i].position - hitPoint).sqrMagnitude;
+            if (d < closestSqr) { closestSqr = d; closest = _bodies[i]; }
+        }
         closest.AddForceAtPosition(impulse, hitPoint, ForceMode.Impulse);
     }
 
     void SetKinematic(bool value)
     {
-        foreach (var rb in _bodies) rb.isKinematic = value;
+        foreach (var rb in _bodies)
+        {
+            rb.collisionDetectionMode = value ? CollisionDetectionMode.Discrete : CollisionDetectionMode.Continuous;
+            rb.isKinematic = value;
+        }
     }
 }

@@ -8,22 +8,22 @@ public class NPCReaction : MonoBehaviour
     public float nodDuration = 0.8f;
 
     NPCHealth _health;
+    WaveDetector _detector;
 
     void Awake() => _health = GetComponent<NPCHealth>();
 
     void Start()
     {
         // Auto-subscribe to any WaveDetector in the scene — no Inspector wiring needed
-        var detector = FindFirstObjectByType<WaveDetector>();
-        if (detector != null)
-            detector.onWaveDetected.AddListener(OnPlayerWaved);
+        _detector = FindAnyObjectByType<WaveDetector>();
+        if (_detector != null)
+            _detector.onWaveDetected.AddListener(OnPlayerWaved);
     }
 
     void OnDestroy()
     {
-        var detector = FindFirstObjectByType<WaveDetector>();
-        if (detector != null)
-            detector.onWaveDetected.RemoveListener(OnPlayerWaved);
+        if (_detector != null)
+            _detector.onWaveDetected.RemoveListener(OnPlayerWaved);
     }
 
     public void OnPlayerWaved()
@@ -42,8 +42,8 @@ public class NPCReaction : MonoBehaviour
     {
         if (npcHead == null) yield break;
         Quaternion original = npcHead.localRotation;
-        Quaternion down = Quaternion.Euler(nodAngle, 0, 0);
-        Quaternion up   = Quaternion.Euler(-nodAngle * 0.4f, 0, 0);
+        Quaternion down = original * Quaternion.Euler(nodAngle, 0, 0);
+        Quaternion up   = original * Quaternion.Euler(-nodAngle * 0.4f, 0, 0);
 
         yield return LerpRot(npcHead, original, down, nodDuration * 0.4f);
         yield return LerpRot(npcHead, down,     up,   nodDuration * 0.3f);

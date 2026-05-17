@@ -6,9 +6,15 @@ public abstract class ScenarioBase : MonoBehaviour
 {
     protected ScenarioManager Manager { get; private set; }
 
+    void Awake()
+    {
+        Manager = FindAnyObjectByType<ScenarioManager>();
+        if (Manager == null)
+            Debug.LogError("[ScenarioBase] No ScenarioManager in scene — outcomes will not display.", this);
+    }
+
     void Start()
     {
-        Manager = FindFirstObjectByType<ScenarioManager>();
         OnScenarioStart();
     }
 

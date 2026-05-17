@@ -23,19 +23,26 @@ public class WaveDetector : MonoBehaviour
     float _rightWindowTimer, _leftWindowTimer;
     bool _lastRightPositive, _lastLeftPositive;
     float _cooldownTimer;
-
-    void Start()
-    {
-        _lastRightPos = rightHandTransform.position;
-        _lastLeftPos = leftHandTransform.position;
-    }
+    bool _initialized;
 
     void Update()
     {
+        if (hmdTransform == null || rightHandTransform == null || leftHandTransform == null) return;
+
+        if (!_initialized)
+        {
+            _lastRightPos  = rightHandTransform.position;
+            _lastLeftPos   = leftHandTransform.position;
+            _initialized   = true;
+            return;
+        }
+
         _cooldownTimer -= Time.deltaTime;
 
-        float rightLateral = (rightHandTransform.position.x - _lastRightPos.x) / Time.deltaTime;
-        float leftLateral  = (leftHandTransform.position.x  - _lastLeftPos.x)  / Time.deltaTime;
+        // Measure lateral movement relative to where the player is facing, not world X
+        Vector3 hmdRight   = hmdTransform.right;
+        float rightLateral = Vector3.Dot(rightHandTransform.position - _lastRightPos, hmdRight) / Time.deltaTime;
+        float leftLateral  = Vector3.Dot(leftHandTransform.position  - _lastLeftPos,  hmdRight) / Time.deltaTime;
         _lastRightPos = rightHandTransform.position;
         _lastLeftPos  = leftHandTransform.position;
 
@@ -50,7 +57,7 @@ public class WaveDetector : MonoBehaviour
     void CheckWave(float handY, float shoulderY, float lateralVel,
                    ref int swings, ref float timer, ref bool lastPositive)
     {
-        timer -= Time.deltaTime;
+        timer = Mathf.Max(0f, timer - Time.deltaTime);
         if (timer <= 0) swings = 0;
         if (handY <= shoulderY) return;
 

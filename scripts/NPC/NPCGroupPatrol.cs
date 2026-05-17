@@ -9,9 +9,10 @@ public class NPCGroupPatrol : MonoBehaviour
     public float moveSpeed = 1.2f;
 
     int _current;
+    bool _reachedEnd;
     WhyGaryScenario _scenario;
 
-    void Awake() => _scenario = FindFirstObjectByType<WhyGaryScenario>();
+    void Start() => _scenario = FindAnyObjectByType<WhyGaryScenario>();
 
     void Update()
     {
@@ -28,8 +29,12 @@ public class NPCGroupPatrol : MonoBehaviour
         {
             if (_current < waypoints.Length - 1)
                 _current++;
-            else
+            else if (!_reachedEnd)
+            {
+                _reachedEnd = true;
+                enabled = false;
                 _scenario?.OnEscortReachedEnd();
+            }
         }
     }
 }

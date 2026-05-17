@@ -19,37 +19,60 @@ public class PlayerBodyDriver : MonoBehaviour
     public float bodyFollowSpeed = 15f;
     public float bodyYawFollowSpeed = 3f;
     public float headHeightOffset = -0.1f;
+    [SerializeField] float torsoHeightOffset = 1.2f;
 
-    void LateUpdate()
+    float _headYaw;
+
+    void Awake()
+    {
+        Debug.Assert(bodyRoot      != null, "[PlayerBodyDriver] bodyRoot is not assigned.",      this);
+        Debug.Assert(headTarget    != null, "[PlayerBodyDriver] headTarget is not assigned.",    this);
+        Debug.Assert(torsoTarget   != null, "[PlayerBodyDriver] torsoTarget is not assigned.",   this);
+        Debug.Assert(leftHandTarget  != null, "[PlayerBodyDriver] leftHandTarget is not assigned.",  this);
+        Debug.Assert(rightHandTarget != null, "[PlayerBodyDriver] rightHandTarget is not assigned.", this);
+    }
+
+    void Update()
     {
         if (hmdTransform == null) return;
 
-        // Head follows HMD, only Y rotation so it doesn't tilt weirdly
-        headTarget.position = hmdTransform.position + Vector3.up * headHeightOffset;
-        float headYaw = hmdTransform.eulerAngles.y;
-        headTarget.rotation = Quaternion.Euler(0, headYaw, 0);
+        Vector3 fwd = Vector3.ProjectOnPlane(hmdTransform.forward, Vector3.up);
+        _headYaw = fwd.sqrMagnitude > 0.001f ? Quaternion.LookRotation(fwd).eulerAngles.y : 0f;
 
-        // Body root infers standing position from HMD height
         Vector3 targetBodyPos = new Vector3(
             hmdTransform.position.x,
             hmdTransform.position.y - standingHeight,
             hmdTransform.position.z
         );
         bodyRoot.position = Vector3.Lerp(bodyRoot.position, targetBodyPos, Time.deltaTime * bodyFollowSpeed);
-        bodyRoot.rotation = Quaternion.Lerp(
-            bodyRoot.rotation,
-            Quaternion.Euler(0, headYaw, 0),
-            Time.deltaTime * bodyYawFollowSpeed
-        );
+        bodyRoot.rotation = Quaternion.Lerp(bodyRoot.rotation, Quaternion.Euler(0, _headYaw, 0), Time.deltaTime * bodyYawFollowSpeed);
 
-        // Torso sits at shoulder height above body root
-        torsoTarget.position = bodyRoot.position + Vector3.up * 1.2f;
-        torsoTarget.rotation = bodyRoot.rotation;
+        if (torsoTarget != null)
+        {
+            torsoTarget.position = bodyRoot.position + Vector3.up * torsoHeightOffset;
+            torsoTarget.rotation = bodyRoot.rotation;
+        }
+    }
 
-        // Hands directly copy controller pose — no lerp so there's zero lag
-        leftHandTarget.position = leftControllerTransform.position;
-        leftHandTarget.rotation = leftControllerTransform.rotation;
-        rightHandTarget.position = rightControllerTransform.position;
-        rightHandTarget.rotation = rightControllerTransform.rotation;
+    void LateUpdate()
+    {
+        if (hmdTransform == null) return;
+
+        if (headTarget != null)
+        {
+            headTarget.position = hmdTransform.position + Vector3.up * headHeightOffset;
+            headTarget.rotation = hmdTransform.rotation;
+        }
+
+        if (leftControllerTransform != null && leftHandTarget != null)
+        {
+            leftHandTarget.position = leftControllerTransform.position;
+            leftHandTarget.rotation = leftControllerTransform.rotation;
+        }
+        if (rightControllerTransform != null && rightHandTarget != null)
+        {
+            rightHandTarget.position = rightControllerTransform.position;
+            rightHandTarget.rotation = rightControllerTransform.rotation;
+        }
     }
 }
