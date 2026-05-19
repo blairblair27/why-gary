@@ -50,6 +50,23 @@ public static class WhyGaryBuilder
 
     // ── Entry point ───────────────────────────────────────────────────────────
 
+    static readonly string[] BuilderRoots =
+    {
+        "Room", "PayphoneBank", "PlayerBody", "CorkGun", "GestureSystem",
+        "EscortGroup", "PatrolPath", "ScenarioManagerObject", "WhyGaryScenarioController"
+    };
+
+    [MenuItem("Why Gary/Clean and Rebuild Scene")]
+    public static void CleanAndRebuild()
+    {
+        foreach (var name in BuilderRoots)
+        {
+            var go = GameObject.Find(name);
+            if (go != null) Undo.DestroyObjectImmediate(go);
+        }
+        BuildWhyGaryScene();
+    }
+
     [MenuItem("Why Gary/Build Why Gary Scene")]
     public static void BuildWhyGaryScene()
     {
