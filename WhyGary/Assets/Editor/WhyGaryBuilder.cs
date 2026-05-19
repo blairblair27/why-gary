@@ -61,8 +61,9 @@ public static class WhyGaryBuilder
     {
         foreach (var name in BuilderRoots)
         {
-            var go = GameObject.Find(name);
-            if (go != null) Undo.DestroyObjectImmediate(go);
+            GameObject go;
+            while ((go = GameObject.Find(name)) != null)
+                Undo.DestroyObjectImmediate(go);
         }
         BuildWhyGaryScene();
     }
