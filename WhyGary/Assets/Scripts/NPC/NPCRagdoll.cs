@@ -1,10 +1,10 @@
-using System.Linq;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 public class NPCRagdoll : MonoBehaviour
 {
     public Material deadMaterial;
+    public GameObject visual;   // HumanDummy child — visible while alive, hidden on ragdoll
 
     Rigidbody[] _bodies;
     MeshRenderer[] _renderers;
@@ -12,14 +12,14 @@ public class NPCRagdoll : MonoBehaviour
 
     void Awake()
     {
-        _bodies = GetComponentsInChildren<Rigidbody>();
+        _bodies    = GetComponentsInChildren<Rigidbody>();
         _renderers = GetComponentsInChildren<MeshRenderer>();
         SetKinematic(true);
+        foreach (var r in _renderers) r.enabled = false;   // physics primitives hidden while HumanDummy is visual
     }
 
     void Start()
     {
-        // Auto-wire grab event — no manual Inspector wiring needed
         var grab = GetComponentInChildren<XRGrabInteractable>(true);
         if (grab != null)
             grab.selectEntered.AddListener(_ => EnableRagdoll());
@@ -35,11 +35,12 @@ public class NPCRagdoll : MonoBehaviour
         }
 
         _ragdollActive = true;
+        if (visual != null) visual.SetActive(false);
+        foreach (var r in _renderers) r.enabled = true;
         SetKinematic(false);
         ApplyImpulse(hitPoint, impulse);
     }
 
-    // Call only on actual death — applies dead material separately from physics ragdoll
     public void OnDied()
     {
         if (deadMaterial == null) return;

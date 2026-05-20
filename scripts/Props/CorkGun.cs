@@ -12,7 +12,6 @@ public class CorkGun : MonoBehaviour
     public float shootSpeed = 12f;
 
     XRGrabInteractable _grab;
-    bool _hasAmmo = true;
 
     void Awake() => _grab = GetComponent<XRGrabInteractable>();
 
@@ -21,12 +20,11 @@ public class CorkGun : MonoBehaviour
 
     void OnFire(ActivateEventArgs _)
     {
-        if (!_hasAmmo) return;
-        _hasAmmo = false;
+        if (corkPrefab == null || firePoint == null) return;
 
         if (corkVisual != null) corkVisual.SetActive(false);
 
-        var cork = Instantiate(corkPrefab, firePoint.position, firePoint.rotation);
-        cork.GetComponent<Rigidbody>().linearVelocity = firePoint.forward * shootSpeed;
+        var projectile = Instantiate(corkPrefab, firePoint.position, firePoint.rotation);
+        projectile.GetComponent<Rigidbody>().linearVelocity = firePoint.forward * shootSpeed;
     }
 }

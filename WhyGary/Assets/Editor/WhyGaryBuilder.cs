@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using TMPro;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -14,6 +15,9 @@ public static class WhyGaryBuilder
 {
     const string MatPath    = "Assets/Materials";
     const string PrefabPath = "Assets/Prefabs";
+
+    const string TargetDummyPath = "Assets/Kevin Iglesias/Human Character Dummy/Prefabs/HumanDummy_M Blue.prefab";
+    const string EscortDummyPath = "Assets/Kevin Iglesias/Human Character Dummy/Prefabs/HumanDummy_M Green.prefab";
 
     const string XROriginName        = "XR Origin (XR Rig)";
     const string CameraOffsetName    = "Camera Offset";
@@ -351,38 +355,47 @@ public static class WhyGaryBuilder
 
     static void CreateCorkGun(Mats m)
     {
+        const string GunPrefabPath = "Assets/Reichsrevolver_M1879/Prefabs/ReichsrevolverM1879.prefab";
+
         var gun = Empty("CorkGun");
-        gun.transform.position = new Vector3(-3.5f, 0.92f, -0.65f);   // just to player's left
+        gun.transform.position = new Vector3(-3.5f, 0.92f, -0.65f);
         gun.transform.rotation = Quaternion.Euler(0, -90, 0);
 
-        var body = Prim("GunBody", PrimitiveType.Cube, gun);
-        body.transform.localPosition = Vector3.zero;
-        body.transform.localScale    = new Vector3(0.08f, 0.15f, 0.25f);
-        SetMat(body, m.gun);
+        var gunPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(GunPrefabPath);
+        if (gunPrefab != null)
+        {
+            var model = (GameObject)PrefabUtility.InstantiatePrefab(gunPrefab, gun.transform);
+            model.name = "GunModel";
+            Undo.RegisterCreatedObjectUndo(model, "GunModel");
+        }
+        else
+        {
+            var body = Prim("GunBody", PrimitiveType.Cube, gun);
+            body.transform.localPosition = Vector3.zero;
+            body.transform.localScale    = new Vector3(0.05f, 0.14f, 0.22f);
+            SetMat(body, m.gun);
+            Debug.LogWarning($"[WhyGaryBuilder] Revolver prefab not found at '{GunPrefabPath}' — import 'Reichsrevolver M-1879' from Asset Store first.");
+        }
 
-        var barrel = Prim("Barrel", PrimitiveType.Cylinder, gun);
-        barrel.transform.localPosition = new Vector3(0f, 0.04f, 0.18f);
-        barrel.transform.localRotation = Quaternion.Euler(90, 0, 0);
-        barrel.transform.localScale    = new Vector3(0.04f, 0.09f, 0.04f);
-        SetMat(barrel, m.gun);
-
-        var cork = Prim("Cork", PrimitiveType.Sphere, gun);
-        cork.transform.localPosition = new Vector3(0f, 0.04f, 0.33f);
-        cork.transform.localScale    = new Vector3(0.05f, 0.05f, 0.05f);
-        SetMat(cork, m.cork);
-
+        // FirePoint at approximate barrel tip — adjust in Inspector if shots appear offset
         var fp = new GameObject("FirePoint");
         fp.transform.SetParent(gun.transform, false);
-        fp.transform.localPosition = new Vector3(0f, 0.04f, 0.36f);
+        fp.transform.localPosition = new Vector3(0f, 0.034f, 0.188f);
 
-        var rb  = gun.AddComponent<Rigidbody>();   rb.mass = 0.5f;
-        var col = gun.AddComponent<BoxCollider>(); col.size = new Vector3(0.08f, 0.15f, 0.25f);
+        var rb  = gun.AddComponent<Rigidbody>();
+        rb.mass = 0.8f;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+
+        var col    = gun.AddComponent<BoxCollider>();
+        col.center = new Vector3(0f, 0.005f, 0.045f);
+        col.size   = new Vector3(0.06f, 0.22f, 0.25f);
+
         var grab = gun.AddComponent<XRGrabInteractable>();
         grab.movementType = XRBaseInteractable.MovementType.VelocityTracking;
 
         var script       = gun.AddComponent<CorkGun>();
         script.firePoint  = fp.transform;
-        script.corkVisual = cork;
+        script.shootSpeed = 25f;
 
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{PrefabPath}/CorkProjectile.prefab");
         if (prefab != null) script.corkPrefab = prefab;
@@ -470,6 +483,24 @@ public static class WhyGaryBuilder
             grab.movementType = XRBaseInteractable.MovementType.VelocityTracking;
         }
 
+        var dummyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(isEscort ? EscortDummyPath : TargetDummyPath);
+        if (dummyPrefab != null)
+        {
+            var vis = (GameObject)PrefabUtility.InstantiatePrefab(dummyPrefab, root.transform);
+            vis.name = "Visual";
+            Undo.RegisterCreatedObjectUndo(vis, "NPC Visual");
+            foreach (var c in vis.GetComponentsInChildren<Collider>())
+                Object.DestroyImmediate(c);
+            ragdoll.visual = vis;
+            var anim = vis.GetComponent<Animator>();
+            if (anim != null) anim.runtimeAnimatorController = CreateOrLoadNPCController();
+        }
+        else
+        {
+            Debug.LogWarning("[WhyGaryBuilder] Human dummy prefab not found — import 'Human Character Dummy' from Asset Store first.");
+        }
+        root.AddComponent<NPCAnimator>();
+
         return root;
     }
 
@@ -493,6 +524,60 @@ public static class WhyGaryBuilder
         crown.transform.localScale    = new Vector3(0.24f, 0.18f, 0.24f);
         SetMat(crown, hatMat);
         Object.DestroyImmediate(crown.GetComponent<CapsuleCollider>());
+    }
+
+    // ── NPC animation controller ──────────────────────────────────────────────
+
+    static RuntimeAnimatorController CreateOrLoadNPCController()
+    {
+        const string ControllerPath = "Assets/Animations/NPCLocomotion.controller";
+        var existing = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
+        if (existing != null) return existing;
+
+        EnsureFolder("Assets/Animations");
+
+        const string AnimBase = "Assets/Kevin Iglesias/Human Animations/Male";
+        var idleClip = LoadFirstClip($"{AnimBase}/Idles/HumanM@Idle01.fbx");
+        var walkClip = LoadFirstClip($"{AnimBase}/Movement/Walk/HumanM@Walk01_Forward.fbx");
+
+        var controller = AnimatorController.CreateAnimatorControllerAtPath(ControllerPath);
+        controller.AddParameter("Speed", AnimatorControllerParameterType.Float);
+        var sm = controller.layers[0].stateMachine;
+
+        if (idleClip != null && walkClip != null)
+        {
+            var locoState = controller.CreateBlendTreeInController("Locomotion", out var blendTree, 0);
+            blendTree.blendParameter = "Speed";
+            blendTree.AddChild(idleClip, 0f);
+            blendTree.AddChild(walkClip, 1.5f);
+            sm.defaultState = locoState;
+        }
+        else
+        {
+            var idleState = sm.AddState("Idle");
+            var walkState = sm.AddState("Walk");
+            if (idleClip != null) idleState.motion = idleClip;
+            if (walkClip != null) walkState.motion = walkClip;
+            var i2w = idleState.AddTransition(walkState);
+            i2w.AddCondition(AnimatorConditionMode.Greater, 0.1f, "Speed");
+            i2w.hasExitTime = false; i2w.duration = 0.15f;
+            var w2i = walkState.AddTransition(idleState);
+            w2i.AddCondition(AnimatorConditionMode.Less, 0.1f, "Speed");
+            w2i.hasExitTime = false; w2i.duration = 0.15f;
+            if (idleClip == null || walkClip == null)
+                Debug.LogWarning("[WhyGaryBuilder] Animation clips missing — import 'Human Basic Motions FREE' then re-run Clean and Rebuild.");
+        }
+
+        AssetDatabase.SaveAssets();
+        return controller;
+    }
+
+    static AnimationClip LoadFirstClip(string fbxPath)
+    {
+        foreach (var asset in AssetDatabase.LoadAllAssetsAtPath(fbxPath))
+            if (asset is AnimationClip clip && !clip.name.StartsWith("__preview__"))
+                return clip;
+        return null;
     }
 
     // ── Patrol path ───────────────────────────────────────────────────────────
