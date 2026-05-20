@@ -274,6 +274,30 @@ public static class WhyGaryBuilder
         phone.transform.SetParent(bank.transform, false);
         phone.transform.localPosition = new Vector3(0f, 0f, z);
 
+        const string PhonePrefabPath = "Assets/Payphone/Prefabs/payphone_request.prefab";
+        var phonePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PhonePrefabPath);
+        if (phonePrefab != null)
+        {
+            var vis = (GameObject)PrefabUtility.InstantiatePrefab(phonePrefab, phone.transform);
+            vis.name = "PhoneModel";
+            vis.transform.localPosition = Vector3.zero;
+            vis.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);   // face east toward player
+            Undo.RegisterCreatedObjectUndo(vis, "PhoneModel");
+            var horn = vis.transform.Find("payphone_horn");
+            if (horn != null)
+            {
+                var rb = horn.gameObject.AddComponent<Rigidbody>();
+                rb.mass = 0.1f; rb.isKinematic = true;
+                rb.interpolation = RigidbodyInterpolation.Interpolate;
+                var grab = horn.gameObject.AddComponent<XRGrabInteractable>();
+                grab.movementType = XRBaseInteractable.MovementType.VelocityTracking;
+                horn.gameObject.AddComponent<AudioSource>();
+                horn.gameObject.AddComponent<PayphoneHandset>();
+            }
+            return;
+        }
+
+        // ── Primitive fallback ────────────────────────────────────────────────
         // Outer housing: dark metal box (keeps collider — part of scene geometry)
         Go("Housing", PrimitiveType.Cube, phone,
             new Vector3(0.52f, 1.05f, 0.22f), new Vector3(0f, 0.90f, 0f), m.phoneHousing);
