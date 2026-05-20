@@ -50,7 +50,7 @@ public static class URPMigration
             return;
         }
 
-        var guids = AssetDatabase.FindAssets("t:Material", new[] { MaterialsFolder });
+        var guids = AssetDatabase.FindAssets("t:Material");   // scan all folders including imported assets
         int count = 0;
         foreach (var guid in guids)
         {

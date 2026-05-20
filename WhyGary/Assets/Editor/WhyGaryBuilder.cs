@@ -347,6 +347,9 @@ public static class WhyGaryBuilder
         foreach (var c in root.GetComponentsInChildren<Collider>())
             Object.DestroyImmediate(c);
 
+        lHand.GetComponent<MeshRenderer>().enabled = false;
+        rHand.GetComponent<MeshRenderer>().enabled = false;
+
         root.AddComponent<PlayerBodyDriver>();
         return new PlayerParts { root = root, head = head.gameObject, torso = torso.gameObject, leftHand = lHand.gameObject, rightHand = rHand.gameObject };
     }
@@ -367,6 +370,10 @@ public static class WhyGaryBuilder
             var model = (GameObject)PrefabUtility.InstantiatePrefab(gunPrefab, gun.transform);
             model.name = "GunModel";
             Undo.RegisterCreatedObjectUndo(model, "GunModel");
+            foreach (var rb in model.GetComponentsInChildren<Rigidbody>(true))
+                Object.DestroyImmediate(rb);
+            foreach (var c in model.GetComponentsInChildren<Collider>(true))
+                Object.DestroyImmediate(c);
         }
         else
         {
