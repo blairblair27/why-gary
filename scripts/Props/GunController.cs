@@ -4,12 +4,11 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(XRGrabInteractable))]
-public class CorkGun : MonoBehaviour
+public class GunController : MonoBehaviour
 {
     public Transform firePoint;
-    public GameObject corkPrefab;
-    public GameObject corkVisual;
-    public float shootSpeed = 12f;
+    public GameObject bulletPrefab;
+    public float shootSpeed = 25f;
 
     XRGrabInteractable _grab;
 
@@ -20,11 +19,8 @@ public class CorkGun : MonoBehaviour
 
     void OnFire(ActivateEventArgs _)
     {
-        if (corkPrefab == null || firePoint == null) return;
-
-        if (corkVisual != null) corkVisual.SetActive(false);
-
-        var projectile = Instantiate(corkPrefab, firePoint.position, firePoint.rotation);
+        if (bulletPrefab == null || firePoint == null) return;
+        var projectile = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
         projectile.GetComponent<Rigidbody>().linearVelocity = firePoint.forward * shootSpeed;
     }
 }

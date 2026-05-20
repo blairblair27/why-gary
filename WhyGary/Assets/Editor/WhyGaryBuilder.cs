@@ -286,11 +286,11 @@ public static class WhyGaryBuilder
             var horn = vis.transform.Find("payphone_horn");
             if (horn != null)
             {
-                var rb = horn.gameObject.AddComponent<Rigidbody>();
-                rb.mass = 0.1f; rb.isKinematic = true;
-                rb.interpolation = RigidbodyInterpolation.Interpolate;
-                var grab = horn.gameObject.AddComponent<XRGrabInteractable>();
-                grab.movementType = XRBaseInteractable.MovementType.VelocityTracking;
+                var hornRb = horn.gameObject.AddComponent<Rigidbody>();
+                hornRb.mass = 0.1f; hornRb.isKinematic = true;
+                hornRb.interpolation = RigidbodyInterpolation.Interpolate;
+                var hornGrab = horn.gameObject.AddComponent<XRGrabInteractable>();
+                hornGrab.movementType = XRBaseInteractable.MovementType.VelocityTracking;
                 horn.gameObject.AddComponent<AudioSource>();
                 horn.gameObject.AddComponent<PayphoneHandset>();
             }
@@ -394,10 +394,10 @@ public static class WhyGaryBuilder
             var model = (GameObject)PrefabUtility.InstantiatePrefab(gunPrefab, gun.transform);
             model.name = "GunModel";
             Undo.RegisterCreatedObjectUndo(model, "GunModel");
-            foreach (var rb in model.GetComponentsInChildren<Rigidbody>(true))
-                Object.DestroyImmediate(rb);
-            foreach (var c in model.GetComponentsInChildren<Collider>(true))
-                Object.DestroyImmediate(c);
+            foreach (var existingRb  in model.GetComponentsInChildren<Rigidbody>(true))
+                Object.DestroyImmediate(existingRb);
+            foreach (var existingCol in model.GetComponentsInChildren<Collider>(true))
+                Object.DestroyImmediate(existingCol);
         }
         else
         {
@@ -424,12 +424,12 @@ public static class WhyGaryBuilder
         var grab = gun.AddComponent<XRGrabInteractable>();
         grab.movementType = XRBaseInteractable.MovementType.VelocityTracking;
 
-        var script       = gun.AddComponent<CorkGun>();
-        script.firePoint  = fp.transform;
-        script.shootSpeed = 25f;
+        var script        = gun.AddComponent<GunController>();
+        script.firePoint   = fp.transform;
+        script.shootSpeed  = 25f;
 
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{PrefabPath}/CorkProjectile.prefab");
-        if (prefab != null) script.corkPrefab = prefab;
+        if (prefab != null) script.bulletPrefab = prefab;
     }
 
     // ── Gesture system ────────────────────────────────────────────────────────
