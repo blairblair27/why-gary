@@ -42,3 +42,11 @@ Desktop.ini
 *.aab
 *.unitypackage
 *.app
+
+# Third-party Asset Store packages (re-import from Asset Store as needed)
+WhyGary/Assets/Kevin Iglesias/
+WhyGary/Assets/Kevin Iglesias.meta
+WhyGary/Assets/Nokobot/
+WhyGary/Assets/Nokobot.meta
+WhyGary/Assets/Reichsrevolver_M1879/
+WhyGary/Assets/Reichsrevolver_M1879.meta
