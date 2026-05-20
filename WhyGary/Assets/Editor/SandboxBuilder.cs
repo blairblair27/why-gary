@@ -287,10 +287,9 @@ public static class SandboxBuilder
         var grab = gun.AddComponent<XRGrabInteractable>();
         grab.movementType = XRBaseInteractable.MovementType.VelocityTracking;
 
-        var script = gun.AddComponent<CorkGun>();
-        script.firePoint  = firePoint.transform;
-        script.corkVisual = cork;
-        // script.corkPrefab — set this in Inspector after creating the CorkProjectile prefab
+        var script = gun.AddComponent<GunController>();
+        script.firePoint = firePoint.transform;
+        // script.bulletPrefab — set this in Inspector after running 'Create Cork Prefab'
     }
 
     // ── Gesture System ────────────────────────────────────────────────────────

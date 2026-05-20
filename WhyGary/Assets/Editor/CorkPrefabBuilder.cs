@@ -64,19 +64,19 @@ public static class CorkPrefabBuilder
                 return;
             }
 
-            // Auto-assign to CorkGun in the active scene if one exists
-            var gun = Object.FindAnyObjectByType<CorkGun>();
-            if (gun != null && gun.corkPrefab == null)
+            // Auto-assign to GunController in the active scene if one exists
+            var gun = Object.FindAnyObjectByType<GunController>();
+            if (gun != null && gun.bulletPrefab == null)
             {
-                gun.corkPrefab = prefab;
+                gun.bulletPrefab = prefab;
                 EditorUtility.SetDirty(gun);
                 UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
                     UnityEngine.SceneManagement.SceneManager.GetActiveScene());
-                Debug.Log("<color=lime><b>CorkProjectile prefab created and assigned to CorkGun.</b> You're ready to shoot!</color>");
+                Debug.Log("<color=lime><b>Bullet prefab created and assigned to GunController.</b> You're ready to shoot!</color>");
             }
             else
             {
-                Debug.Log($"<color=lime><b>CorkProjectile prefab created at {PrefabPath}.</b> Drag it onto CorkGun.corkPrefab in the Inspector.</color>");
+                Debug.Log($"<color=lime><b>Bullet prefab created at {PrefabPath}.</b> Drag it onto GunController.bulletPrefab in the Inspector.</color>");
             }
 
             AssetDatabase.SaveAssets();
