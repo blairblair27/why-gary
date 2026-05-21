@@ -132,4 +132,10 @@ public class VRPrimitiveArm : MonoBehaviour
         mat.SetFloat("_Smoothness", 0.08f);
         return mat;
     }
+
+    void OnDestroy()
+    {
+        if (_sleeveMat != null) Destroy(_sleeveMat);
+        if (_handMat   != null) Destroy(_handMat);
+    }
 }

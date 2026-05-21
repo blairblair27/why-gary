@@ -15,7 +15,7 @@ public class VRHandAnimator : MonoBehaviour
 
     VRHandPose _overridePose;
     float      _overrideWeight;
-    float      _overrideBlendTime;
+    float      _overrideBlendTime = 0.001f;
     bool       _overrideFadingIn;
 
     public void SetOverridePose(VRHandPose pose, float blendTime)

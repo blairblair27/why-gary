@@ -22,6 +22,7 @@ public class GunController : MonoBehaviour
 
     XRGrabInteractable _grab;
     bool               _held;
+    VRFingerTracker    _tracker;
 
     void Awake() => _grab = GetComponent<XRGrabInteractable>();
 
@@ -43,12 +44,9 @@ public class GunController : MonoBehaviour
 
     void Update()
     {
-        if (!_held || rightHandAnimator == null || triggerPose == null) return;
+        if (!_held || rightHandAnimator == null || triggerPose == null || _tracker == null) return;
 
-        var tracker = rightHandAnimator.GetComponent<VRFingerTracker>();
-        if (tracker == null) return;
-
-        if (tracker.State.index > 0.5f)
+        if (_tracker.State.index > 0.5f)
             rightHandAnimator.SetOverridePose(triggerPose, gripBlendTime);
         else if (pistolGripPose != null)
             rightHandAnimator.SetOverridePose(pistolGripPose, gripBlendTime);
@@ -63,14 +61,16 @@ public class GunController : MonoBehaviour
 
     void OnGrabbed(SelectEnterEventArgs _)
     {
-        _held = true;
+        _held    = true;
+        _tracker = rightHandAnimator != null ? rightHandAnimator.GetComponent<VRFingerTracker>() : null;
         if (rightHandAnimator != null && pistolGripPose != null)
             rightHandAnimator.SetOverridePose(pistolGripPose, gripBlendTime);
     }
 
     void OnReleased(SelectExitEventArgs _)
     {
-        _held = false;
+        _held    = false;
+        _tracker = null;
         rightHandAnimator?.ClearOverridePose(releaseBlendTime);
     }
 }

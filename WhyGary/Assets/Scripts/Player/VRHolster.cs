@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 public class VRHolster : MonoBehaviour
 {
@@ -68,6 +69,11 @@ public class VRHolster : MonoBehaviour
     public void Holster()
     {
         if (gunTransform == null) return;
+
+        if (gunInteractable != null && gunInteractable.isSelected)
+            gunInteractable.interactionManager.CancelInteractableSelection(
+                (IXRSelectInteractable)gunInteractable);
+
         _isHolstered = true;
         SetGunKinematic(true);
         gunTransform.SetParent(_holsterAnchor);
