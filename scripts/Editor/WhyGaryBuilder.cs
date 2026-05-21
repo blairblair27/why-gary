@@ -37,7 +37,7 @@ public static class WhyGaryBuilder
     {
         public Material player, npc, npcDead, escort, hat;
         public Material floor, room, ceiling, wallBlue;
-        public Material gun, cork;
+        public Material gun, bullet;
         public Material phoneHousing, phoneFace, phoneDisplay, phoneKeypad, phoneSilver, phoneCord;
         public Material fluorescent;
     }
@@ -56,7 +56,7 @@ public static class WhyGaryBuilder
 
     static readonly string[] BuilderRoots =
     {
-        "Room", "PayphoneBank", "PlayerBody", "CorkGun", "GestureSystem",
+        "Room", "PayphoneBank", "PlayerBody", "Gun", "GestureSystem",
         "EscortGroup", "PatrolPath", "ScenarioManagerObject", "WhyGaryScenarioController"
     };
 
@@ -91,7 +91,7 @@ public static class WhyGaryBuilder
         CreateRoom(m);
         CreatePayphoneBank(m);
         var player     = CreatePlayerBody(m);
-        CreateCorkGun(m);
+        CreateGun(m);
         CreateGestureSystem();
         var escortData = CreateEscortGroup(m);
         var waypoints  = CreatePatrolPath();
@@ -105,7 +105,7 @@ public static class WhyGaryBuilder
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("<color=lime><b>Why Gary scene built!</b> Run 'Create Cork Prefab' if not done yet, then hit Play.</color>");
+        Debug.Log("<color=lime><b>Why Gary scene built!</b> Hit Play to start.</color>");
     }
 
     // ── Tags ──────────────────────────────────────────────────────────────────
@@ -146,7 +146,7 @@ public static class WhyGaryBuilder
         ceiling      = Mat("CeilingMaterial",      new Color(0.88f, 0.88f, 0.86f)),
         wallBlue     = Mat("WallBlueMaterial",     new Color(0.12f, 0.20f, 0.68f)),
         gun          = Mat("GunMaterial",          new Color(0.20f, 0.20f, 0.20f)),
-        cork         = Mat("CorkMaterial",         new Color(0.85f, 0.70f, 0.50f)),
+        bullet       = Mat("BulletMaterial",       new Color(0.85f, 0.70f, 0.50f)),
         phoneHousing = Mat("PhoneHousingMaterial", new Color(0.22f, 0.21f, 0.16f)),
         phoneFace    = Mat("PhoneFaceMaterial",    new Color(0.30f, 0.29f, 0.22f)),
         phoneDisplay = Mat("PhoneDisplayMaterial", new Color(0.05f, 0.06f, 0.08f)),
@@ -256,7 +256,9 @@ public static class WhyGaryBuilder
     static void CreatePayphoneBank(Mats m)
     {
         var bank = Empty("PayphoneBank");
-        bank.transform.position = new Vector3(-3.87f, 0f, 0f);
+        // x=-3.65: with 90° Y rotation the booth is 0.37m deep in world X.
+        // Back face lands at -3.65 - 0.185 = -3.835, ~5cm proud of the wall interior at x=-3.9.
+        bank.transform.position = new Vector3(-3.65f, 0f, 0f);
 
         float startZ = -((PhoneCount - 1) * PhoneSpacing) / 2f;   // = -3.06
         for (int i = 0; i < PhoneCount; i++)
@@ -274,26 +276,68 @@ public static class WhyGaryBuilder
         phone.transform.SetParent(bank.transform, false);
         phone.transform.localPosition = new Vector3(0f, 0f, z);
 
-        const string PhonePrefabPath = "Assets/Payphone/Prefabs/payphone_request.prefab";
-        var phonePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PhonePrefabPath);
-        if (phonePrefab != null)
+        const string BoothPrefabPath = "Assets/Payphone/Prefabs/payphone_booth01.prefab";
+        // payphone_request ships with separate payphone_horn / payphone_wire / payphone_main children
+        const string PhoneUnitPath   = "Assets/Payphone/Prefabs/payphone_request.prefab";
+
+        var boothPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(BoothPrefabPath);
+        if (boothPrefab != null)
         {
-            var vis = (GameObject)PrefabUtility.InstantiatePrefab(phonePrefab, phone.transform);
-            vis.name = "PhoneModel";
-            vis.transform.localPosition = Vector3.zero;
-            vis.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);   // face east toward player
-            Undo.RegisterCreatedObjectUndo(vis, "PhoneModel");
-            var horn = vis.transform.Find("payphone_horn");
-            if (horn != null)
+            var booth = (GameObject)PrefabUtility.InstantiatePrefab(boothPrefab, phone.transform);
+            booth.name = "BoothShell";
+            booth.transform.localPosition = Vector3.zero;
+            booth.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);  // open face east, toward player
+            Undo.RegisterCreatedObjectUndo(booth, "BoothShell");
+
+            var phoneUnitPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PhoneUnitPath);
+            if (phoneUnitPrefab != null)
             {
-                var hornRb = horn.gameObject.AddComponent<Rigidbody>();
-                hornRb.mass = 0.1f; hornRb.isKinematic = true;
-                hornRb.interpolation = RigidbodyInterpolation.Interpolate;
-                var hornGrab = horn.gameObject.AddComponent<XRGrabInteractable>();
-                hornGrab.movementType = XRBaseInteractable.MovementType.VelocityTracking;
-                horn.gameObject.AddComponent<AudioSource>();
-                horn.gameObject.AddComponent<PayphoneHandset>();
+                var unit = (GameObject)PrefabUtility.InstantiatePrefab(phoneUnitPrefab, booth.transform);
+                unit.name = "PhoneUnit";
+                unit.transform.localPosition = new Vector3(0f, 0.95f, 0f);
+                unit.transform.localRotation = Quaternion.identity;
+                Undo.RegisterCreatedObjectUndo(unit, "PhoneUnit");
+
+                var horn = unit.transform.Find("payphone_horn");
+                var wire = unit.transform.Find("payphone_wire");
+
+                if (horn != null)
+                {
+                    var hornRb = horn.gameObject.AddComponent<Rigidbody>();
+                    hornRb.mass = 0.15f; hornRb.isKinematic = true;
+                    hornRb.interpolation = RigidbodyInterpolation.Interpolate;
+
+                    var hornGrab = horn.gameObject.AddComponent<XRGrabInteractable>();
+                    hornGrab.movementType = XRBaseInteractable.MovementType.VelocityTracking;
+
+                    horn.gameObject.AddComponent<AudioSource>();
+                    var hornHandset = horn.gameObject.AddComponent<PayphoneHandset>();
+
+                    // Dynamic cord: hidden while in cradle, shown when grabbed
+                    var cordGo = new GameObject("CordLine");
+                    cordGo.transform.SetParent(unit.transform, false);
+                    cordGo.SetActive(false);
+                    Undo.RegisterCreatedObjectUndo(cordGo, "CordLine");
+
+                    var lr = cordGo.AddComponent<LineRenderer>();
+                    lr.startWidth = 0.007f; lr.endWidth = 0.007f;
+                    lr.useWorldSpace = true;
+                    lr.material = m.phoneCord;
+                    lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+
+                    var hornCord      = cordGo.AddComponent<PhoneCord>();
+                    hornCord.cordStart = wire != null ? wire : unit.transform;
+                    hornCord.cordEnd   = horn;
+
+                    hornHandset.staticCord  = wire != null ? wire.GetComponent<Renderer>() : null;
+                    hornHandset.dynamicCord = hornCord;
+                }
             }
+            else
+            {
+                Debug.LogWarning("[WhyGaryBuilder] payphone_request.prefab not found — phone unit missing from booth.");
+            }
+
             return;
         }
 
@@ -378,13 +422,13 @@ public static class WhyGaryBuilder
         return new PlayerParts { root = root, head = head.gameObject, torso = torso.gameObject, leftHand = lHand.gameObject, rightHand = rHand.gameObject };
     }
 
-    // ── Cork gun ──────────────────────────────────────────────────────────────
+    // ── Gun ───────────────────────────────────────────────────────────────────
 
-    static void CreateCorkGun(Mats m)
+    static void CreateGun(Mats m)
     {
         const string GunPrefabPath = "Assets/Reichsrevolver_M1879/Prefabs/ReichsrevolverM1879.prefab";
 
-        var gun = Empty("CorkGun");
+        var gun = Empty("Gun");
         gun.transform.position = new Vector3(-3.5f, 0.92f, -0.65f);
         gun.transform.rotation = Quaternion.Euler(0, -90, 0);
 
@@ -428,7 +472,7 @@ public static class WhyGaryBuilder
         script.firePoint   = fp.transform;
         script.shootSpeed  = 25f;
 
-        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{PrefabPath}/CorkProjectile.prefab");
+        var prefab = BulletPrefabBuilder.BuildPrefab(interactive: false);
         if (prefab != null) script.bulletPrefab = prefab;
     }
 
@@ -523,6 +567,11 @@ public static class WhyGaryBuilder
             foreach (var c in vis.GetComponentsInChildren<Collider>())
                 Object.DestroyImmediate(c);
             ragdoll.visual = vis;
+            // Primitive MeshRenderers are the physics skeleton — hide them now.
+            // HumanDummy uses SkinnedMeshRenderer so it is unaffected.
+            // NPCRagdoll.EnableRagdoll() re-enables these when the character dies.
+            foreach (var r in root.GetComponentsInChildren<MeshRenderer>())
+                r.enabled = false;
             var anim = vis.GetComponent<Animator>();
             if (anim != null) anim.runtimeAnimatorController = CreateOrLoadNPCController();
         }

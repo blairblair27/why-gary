@@ -2,7 +2,7 @@ using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(Collider))]
-public class CorkProjectile : MonoBehaviour
+public class BulletProjectile : MonoBehaviour
 {
     [SerializeField] float _headDamage  = 9999f;
     [SerializeField] float _torsoDamage = 40f;
@@ -21,7 +21,7 @@ public class CorkProjectile : MonoBehaviour
     {
         if (col.gameObject.CompareTag("NPCEscort"))
         {
-            col.gameObject.GetComponentInParent<EscortAgent>()?.OnHitByCork();
+            col.gameObject.GetComponentInParent<EscortAgent>()?.OnHitByBullet();
             Destroy(gameObject);
             return;
         }

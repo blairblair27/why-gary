@@ -2,20 +2,32 @@ using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
-// Attach to a phone handset GameObject that also has XRGrabInteractable + AudioSource.
-// Plays a procedurally generated North American dial tone (350 Hz + 440 Hz) when grabbed.
-// Spatial audio with a tight rolloff (~22 cm) means only the ear touching the receiver hears it.
+// Attach to payphone_horn. Plays a procedurally generated North American dial tone (350+440 Hz)
+// when grabbed. Tight spatial rolloff (~50 cm) means the tone is only audible near the player's ear.
+// Snaps back to cradle position on release.
 [RequireComponent(typeof(AudioSource))]
 [RequireComponent(typeof(XRGrabInteractable))]
 public class PayphoneHandset : MonoBehaviour
 {
-    const int   FallbackSampleRate  = 44100;
-    const float DialToneFreq1Hz     = 350f;   // NANP dial tone component 1
-    const float DialToneFreq2Hz     = 440f;   // NANP dial tone component 2
-    const float DialToneAmplitude   = 0.22f;
+    // Wired by WhyGaryBuilder at scene build time
+    [HideInInspector] public Renderer  staticCord;   // payphone_wire mesh — shown in cradle
+    [HideInInspector] public PhoneCord dynamicCord;  // LineRenderer cord   — shown when held
 
-    AudioSource _audio;
+    const float DialToneFreq1Hz    = 350f;
+    const float DialToneFreq2Hz    = 440f;
+    const float DialToneAmplitude  = 0.22f;
+    const int   FallbackSampleRate = 44100;
+
+    AudioSource        _audio;
     XRGrabInteractable _grab;
+    Vector3            _cradleLocalPos;
+    Quaternion         _cradleLocalRot;
+
+    void Awake()
+    {
+        _cradleLocalPos = transform.localPosition;
+        _cradleLocalRot = transform.localRotation;
+    }
 
     void Start()
     {
@@ -36,32 +48,44 @@ public class PayphoneHandset : MonoBehaviour
             _grab.selectEntered.AddListener(OnGrabbed);
             _grab.selectExited.AddListener(OnReleased);
         }
+
+        if (dynamicCord != null) dynamicCord.gameObject.SetActive(false);
     }
 
     void OnDestroy()
     {
-        if (_grab != null)
-        {
-            _grab.selectEntered.RemoveListener(OnGrabbed);
-            _grab.selectExited.RemoveListener(OnReleased);
-        }
+        if (_grab == null) return;
+        _grab.selectEntered.RemoveListener(OnGrabbed);
+        _grab.selectExited.RemoveListener(OnReleased);
     }
 
-    void OnGrabbed(UnityEngine.XR.Interaction.Toolkit.SelectEnterEventArgs _) => _audio.Play();
-    void OnReleased(UnityEngine.XR.Interaction.Toolkit.SelectExitEventArgs _) => _audio.Stop();
+    void OnGrabbed(SelectEnterEventArgs _)
+    {
+        _audio.Play();
+        if (staticCord  != null) staticCord.enabled = false;
+        if (dynamicCord != null) dynamicCord.gameObject.SetActive(true);
+    }
+
+    void OnReleased(SelectExitEventArgs _)
+    {
+        _audio.Stop();
+        transform.localPosition = _cradleLocalPos;
+        transform.localRotation = _cradleLocalRot;
+        if (staticCord  != null) staticCord.enabled = true;
+        if (dynamicCord != null) dynamicCord.gameObject.SetActive(false);
+    }
 
     static AudioClip GenerateDialTone()
     {
         int rate    = AudioSettings.outputSampleRate > 0 ? AudioSettings.outputSampleRate : FallbackSampleRate;
-        int samples = rate * 3;   // 3-second buffer — both 350 Hz and 440 Hz complete whole cycles
+        int samples = rate * 3;
         var clip    = AudioClip.Create("DialTone", samples, 1, rate, false);
-
         float[] data = new float[samples];
         for (int i = 0; i < samples; i++)
         {
-            float t  = (float)i / rate;
-            data[i]  = DialToneAmplitude * (Mathf.Sin(2f * Mathf.PI * DialToneFreq1Hz * t)
-                                          + Mathf.Sin(2f * Mathf.PI * DialToneFreq2Hz * t));
+            float t = (float)i / rate;
+            data[i] = DialToneAmplitude * (Mathf.Sin(2f * Mathf.PI * DialToneFreq1Hz * t)
+                                         + Mathf.Sin(2f * Mathf.PI * DialToneFreq2Hz * t));
         }
         clip.SetData(data, 0);
         return clip;

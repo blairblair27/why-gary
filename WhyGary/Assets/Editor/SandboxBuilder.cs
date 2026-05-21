@@ -27,7 +27,7 @@ public static class SandboxBuilder
         var player = CreatePlayerBody(m);
         var npc    = CreateNPC(m);
         CreateTable(m);
-        CreateCorkGun(m);
+        CreateGun(m);
         var gesture = CreateGestureSystem();
 
         WirePlayerBodyDriver(player);
@@ -37,7 +37,7 @@ public static class SandboxBuilder
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
             UnityEngine.SceneManagement.SceneManager.GetActiveScene());
 
-        Debug.Log("<color=lime><b>Why Gary: Sandbox scene built!</b> One remaining step: assign CorkGun.corkPrefab in the Inspector after creating the cork prefab.</color>");
+        Debug.Log("<color=lime><b>Why Gary: Sandbox scene built!</b> Hit Play to test.</color>");
     }
 
     // ── Tags ──────────────────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ public static class SandboxBuilder
 
     struct Mats
     {
-        public Material player, npc, npcDead, room, gun, cork;
+        public Material player, npc, npcDead, room, gun, bullet;
     }
 
     static Mats BuildMaterials() => new Mats
@@ -78,7 +78,7 @@ public static class SandboxBuilder
         npcDead = Mat("NPCDeadMaterial", new Color(0.70f, 0.15f, 0.10f)),
         room    = Mat("RoomMaterial",    new Color(0.70f, 0.70f, 0.65f)),
         gun     = Mat("GunMaterial",     new Color(0.20f, 0.20f, 0.20f)),
-        cork    = Mat("CorkMaterial",    new Color(0.85f, 0.70f, 0.50f)),
+        bullet  = Mat("BulletMaterial",  new Color(0.85f, 0.70f, 0.50f)),
     };
 
     static Material Mat(string name, Color color)
@@ -251,11 +251,11 @@ public static class SandboxBuilder
         }
     }
 
-    // ── Cork Gun ──────────────────────────────────────────────────────────────
+    // ── Gun ───────────────────────────────────────────────────────────────────
 
-    static void CreateCorkGun(Mats m)
+    static void CreateGun(Mats m)
     {
-        var gun = Empty("CorkGun");
+        var gun = Empty("Gun");
         gun.transform.position = new Vector3(1.2f, 0.83f, 1.5f);
         gun.transform.rotation = Quaternion.Euler(0, 90, 0);
 
@@ -270,10 +270,10 @@ public static class SandboxBuilder
         barrel.transform.localScale    = new Vector3(0.04f, 0.09f, 0.04f);
         SetMat(barrel, m.gun);
 
-        var cork = Prim("Cork", PrimitiveType.Sphere, gun);
-        cork.transform.localPosition = new Vector3(0, 0.04f, 0.33f);
-        cork.transform.localScale    = new Vector3(0.05f, 0.05f, 0.05f);
-        SetMat(cork, m.cork);
+        var bullet = Prim("Bullet", PrimitiveType.Sphere, gun);
+        bullet.transform.localPosition = new Vector3(0, 0.04f, 0.33f);
+        bullet.transform.localScale    = new Vector3(0.05f, 0.05f, 0.05f);
+        SetMat(bullet, m.bullet);
 
         var firePoint = new GameObject("FirePoint");
         firePoint.transform.SetParent(gun.transform, false);
@@ -289,7 +289,8 @@ public static class SandboxBuilder
 
         var script = gun.AddComponent<GunController>();
         script.firePoint = firePoint.transform;
-        // script.bulletPrefab — set this in Inspector after running 'Create Cork Prefab'
+        var prefab = BulletPrefabBuilder.BuildPrefab(interactive: false);
+        if (prefab != null) script.bulletPrefab = prefab;
     }
 
     // ── Gesture System ────────────────────────────────────────────────────────

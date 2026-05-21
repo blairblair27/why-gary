@@ -2,26 +2,28 @@
 using UnityEditor;
 using UnityEngine;
 
-public static class CorkPrefabBuilder
+public static class BulletPrefabBuilder
 {
-    const string PrefabPath = "Assets/Prefabs/CorkProjectile.prefab";
-    const string MatPath    = "Assets/Materials/CorkMaterial.mat";
+    const string PrefabPath = "Assets/Prefabs/BulletProjectile.prefab";
+    const string MatPath    = "Assets/Materials/BulletMaterial.mat";
 
-    [MenuItem("Why Gary/Create Cork Prefab")]
-    public static void CreateCorkPrefab()
+    [MenuItem("Why Gary/Create Bullet Prefab")]
+    public static void CreateBulletPrefab() => BuildPrefab(interactive: true);
+
+    // Called by scene builders to auto-create without dialog prompts.
+    public static GameObject BuildPrefab(bool interactive = false)
     {
         EnsureFolder("Assets/Prefabs");
 
-        // Build the prefab source object
         var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        go.name = "CorkProjectile";
+        go.name = "BulletProjectile";
         go.transform.localScale = new Vector3(0.05f, 0.05f, 0.05f);
 
         var mat = AssetDatabase.LoadAssetAtPath<Material>(MatPath);
         if (mat != null)
             go.GetComponent<MeshRenderer>().sharedMaterial = mat;
         else
-            Debug.LogWarning("CorkMaterial not found — run 'Build Sandbox Scene' first, or assign manually.");
+            Debug.LogWarning("BulletMaterial not found — run 'Build Why Gary Scene' first, or assign manually.");
 
         var rb = go.AddComponent<Rigidbody>();
         rb.mass                   = 0.02f;
@@ -34,24 +36,19 @@ public static class CorkPrefabBuilder
         var col = go.GetComponent<SphereCollider>();
         col.radius = 0.5f; // local-space radius; world radius = 0.05 * 0.5 = 0.025m
 
-        go.AddComponent<CorkProjectile>();
-
-        // Set layer to "Cork" if it exists
-        int corkLayer = LayerMask.NameToLayer("Cork");
-        if (corkLayer != -1) go.layer = corkLayer;
+        go.AddComponent<BulletProjectile>();
 
         try
         {
-            // Save as prefab
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) != null)
+            if (interactive && AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) != null)
             {
-                if (!EditorUtility.DisplayDialog("Cork Prefab Builder",
+                if (!EditorUtility.DisplayDialog("Bullet Prefab Builder",
                     $"A prefab already exists at {PrefabPath}. Overwrite it?",
                     "Overwrite", "Cancel"))
                 {
                     Object.DestroyImmediate(go);
                     go = null;
-                    return;
+                    return AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
                 }
             }
 
@@ -60,11 +57,10 @@ public static class CorkPrefabBuilder
 
             if (!success)
             {
-                Debug.LogError("Failed to save CorkProjectile prefab.");
-                return;
+                Debug.LogError("Failed to save BulletProjectile prefab.");
+                return null;
             }
 
-            // Auto-assign to GunController in the active scene if one exists
             var gun = Object.FindAnyObjectByType<GunController>();
             if (gun != null && gun.bulletPrefab == null)
             {
@@ -72,15 +68,14 @@ public static class CorkPrefabBuilder
                 EditorUtility.SetDirty(gun);
                 UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
                     UnityEngine.SceneManagement.SceneManager.GetActiveScene());
-                Debug.Log("<color=lime><b>Bullet prefab created and assigned to GunController.</b> You're ready to shoot!</color>");
             }
-            else
-            {
-                Debug.Log($"<color=lime><b>Bullet prefab created at {PrefabPath}.</b> Drag it onto GunController.bulletPrefab in the Inspector.</color>");
-            }
+
+            if (interactive)
+                Debug.Log($"<color=lime><b>Bullet prefab created at {PrefabPath}.</b></color>");
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
+            return prefab;
         }
         finally
         {

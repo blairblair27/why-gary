@@ -28,7 +28,7 @@ public class WhyGaryScenario : ScenarioBase
         }
     }
 
-    // Called by EscortAgent when any escort is struck by a cork
+    // Called by EscortAgent when any escort is struck by a bullet
     public void OnEscortHit()
     {
         if (_ended) return;

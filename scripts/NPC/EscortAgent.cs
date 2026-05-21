@@ -11,8 +11,8 @@ public class EscortAgent : MonoBehaviour
 
     void Start() => _scenario = FindAnyObjectByType<WhyGaryScenario>();
 
-    // Called by CorkProjectile when tag == "NPCEscort"
-    public void OnHitByCork()
+    // Called by BulletProjectile when tag == "NPCEscort"
+    public void OnHitByBullet()
     {
         _scenario?.OnEscortHit();
     }
