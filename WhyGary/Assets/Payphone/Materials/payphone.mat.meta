@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c7e336992276ec94bb8fc7517382d72b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 96087
+  packageName: Payphone Pack
+  packageVersion: 1.1
+  assetPath: Assets/Payphone/Materials/payphone.mat
+  uploadId: 515349

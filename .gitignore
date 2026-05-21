@@ -52,3 +52,6 @@ WhyGary/Assets/Reichsrevolver_M1879/
 WhyGary/Assets/Reichsrevolver_M1879.meta
 WhyGary/Assets/Payphone/
 WhyGary/Assets/Payphone.meta
+# Track material overrides so URP _BaseMap fixes survive a fresh Asset Store re-import
+!WhyGary/Assets/Payphone/Materials/
+!WhyGary/Assets/Payphone/Materials/**
